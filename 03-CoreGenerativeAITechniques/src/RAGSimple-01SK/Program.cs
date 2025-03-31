@@ -9,9 +9,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Plugins.Memory;
+using Azure.AI.OpenAI;
+using Microsoft.Extensions.AI;
+using Azure;
+using Azure.AI.Inference;
+using System.ClientModel;
 
 // system message
 var systemMessage = "You are a helpful assistant. You reply in short and precise answers, and you explain your responses. If you don't know an answer, you reply 'I don't know'";
@@ -22,14 +28,17 @@ var question = "What is Bruno's favourite super hero?";
 // intro
 Console.WriteLine($"Question: {question}");
 
-var modelId = "llama3.2-vision";
+//var modelId = "llama3.2-vision";
+var modelId = "gpt-4o-mini";
 
 // Create a chat completion service
 var builder = Kernel.CreateBuilder();
-builder.AddOpenAIChatCompletion(
-    modelId: modelId,
-    endpoint: new Uri("http://localhost:11434"),
-    apiKey: "apikey");
+
+var deploymentName = "gpt-4o-mini";
+var endpoint = new Uri("https://azureopenaiwithimagesgeneration.openai.azure.com/");
+var apiKey = new ApiKeyCredential(Environment.GetEnvironmentVariable("AZURE_AI_KEY"));
+var client = new AzureOpenAIClient(endpoint, apiKey);
+builder.AddAzureOpenAIChatCompletion(deploymentName, client, "localId", deploymentName);
 builder.AddLocalTextEmbeddingGeneration();
 Kernel kernel = builder.Build();
 var chat = kernel.GetRequiredService<IChatCompletionService>();
@@ -86,7 +95,7 @@ TextMemoryPlugin memoryPlugin = new(memory);
 // Import the text memory plugin into the Kernel.
 kernel.ImportPluginFromObject(memoryPlugin);
 
-OpenAIPromptExecutionSettings settings = new()
+AzureOpenAIPromptExecutionSettings settings = new()
 {
     ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions,
 };
